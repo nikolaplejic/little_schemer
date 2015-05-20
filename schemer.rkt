@@ -128,8 +128,8 @@
           ((eq? a (car lat)) (multirember a (cdr lat)))
           (else (cons (car lat) (multirember a (cdr lat)))))))
 
-(check-equal? (multirember 'cup '(coffe cup tea cup and hick cup))
-              '(coffe tea and hick))
+(check-equal? (multirember 'cup '(coffee cup tea cup and hick cup))
+              '(coffee tea and hick))
 
 ;; -----------------------------------------------------------------------------
 
@@ -398,3 +398,139 @@
 
 (check-equal? (rempick1 3 '(hotdogs with hot mustard))
               '(hotdogs with mustard))
+
+;; -----------------------------------------------------------------------------
+;; 5. *OH MY GAWD*: IT'S FULL OF STARS
+;; -----------------------------------------------------------------------------
+
+(define rember*
+  (λ (a l)
+    (cond ((null? l) l)
+          ((not (atom? (car l))) (cons (rember* a (car l))
+                                       (rember* a (cdr l))))
+          ((eq? a (car l)) (rember* a (cdr l)))
+          (else (cons (car l) (rember* a (cdr l)))))))
+
+;; holy guacamole that's a lot of parens
+(check-equal? (rember* 'cup '((coffee) cup ((tea) cup) (and (hick)) cup))
+              '((coffee) ((tea)) (and (hick))))
+(check-equal? (rember* 'sauce '(((tomato sauce)) ((bean) sauce)
+                                                 (and ((flying)) sauce)))
+              '(((tomato)) ((bean)) (and ((flying)))))
+
+;; -----------------------------------------------------------------------------
+
+(define insertR*
+  (λ (new old l)
+    (cond ((null? l) '())
+          ((not (atom? (car l))) (cons (insertR* new old (car l))
+                                       (insertR* new old (cdr l))))
+          ((eq? old (car l)) (cons (car l)
+                                   (cons new
+                                         (insertR* old new (cdr l)))))
+          (else (cons (car l) (insertR* new old (cdr l)))))))
+
+(check-equal? (insertR* 'roast 'chuck
+                        '((how much (wood)) could ((a (wood) chuck))
+                                            (((chuck)))
+                                            (if (a) ((wood chuck)))
+                                            could chuck wood))
+              '((how much (wood)) could ((a (wood) chuck roast))
+                                            (((chuck roast)))
+                                            (if (a) ((wood chuck roast)))
+                                            could chuck roast wood))
+
+;; -----------------------------------------------------------------------------
+
+(define occur*
+  (λ (a l)
+    (cond
+      ((null? l) 0)
+      ((not (atom? (car l))) (o+ (occur* a (car l))
+                                 (occur* a (cdr l))))
+      ((eqan? a (car l)) (add1 (occur* a (cdr l))))
+      (else (occur* a (cdr l))))))
+
+(check-equal? (occur* 'banana '((banana)
+                                (split ((((banana ice)))
+                                        (cream (banana))
+                                        sherbet))
+                                (banana)
+                                (bread)
+                                (banana brandy)))
+              5)
+
+;; -----------------------------------------------------------------------------
+
+(define subst*
+  (λ (new old l)
+    (cond ((null? l) '())
+          ((not (atom? (car l))) (cons (subst* new old (car l))
+                                       (subst* new old (cdr l))))
+          ((eq? old (car l)) (cons new (subst* new old (cdr l))))
+          (else (cons (car l) (subst* new old (cdr l)))))))
+
+(check-equal? (subst* 'orange 'banana
+                      '((banana)
+                        (split ((((banana ice)))
+                                (cream (banana))
+                                sherbet))
+                        (banana)
+                        (bread)
+                        (banana brandy)))
+              '((orange)
+                (split ((((orange ice)))
+                        (cream (orange))
+                        sherbet))
+                (orange)
+                (bread)
+                (orange brandy)))
+
+;; -----------------------------------------------------------------------------
+
+(define insertL*
+  (λ (new old l)
+    (cond ((null? l) '())
+          ((not (atom? (car l))) (cons (insertL* new old (car l))
+                                       (insertL* new old (cdr l))))
+          ((eq? old (car l)) (cons new
+                                   (cons (car l)
+                                         (insertL* new old (cdr l)))))
+          (else (cons (car l) (insertL* new old (cdr l)))))))
+
+(check-equal? (insertL* 'pecker 'chuck
+                        '((how much (wood)) could ((a (wood) chuck))
+                                            (((chuck)))
+                                            (if (a) ((wood chuck)))
+                                            could chuck wood))
+              '((how much (wood)) could ((a (wood) pecker chuck))
+                                  (((pecker chuck)))
+                                  (if (a) ((wood pecker chuck)))
+                                  could pecker chuck wood))
+
+;; -----------------------------------------------------------------------------
+
+(define member*
+  (λ (a l)
+    (cond ((null? l) #f)
+          ((not (atom? (car l))) (or (member* a (car l))
+                                     (member* a (cdr l))))
+          ((eq? a (car l)) #t)
+          (else (member* a (cdr l))))))
+
+(check-equal? (member* 'chips '((potato) 
+                                (chips ((with) fish)
+                                       (chips))))
+              #t)
+
+;; -----------------------------------------------------------------------------
+
+(define leftmost
+  (λ (l)
+    (cond ((atom? (car l)) (car l))
+          (else (leftmost (car l))))))
+
+(check-equal? (leftmost '((potato) 
+                          (chips ((with) fish)
+                                 (chips))))
+              'potato)
