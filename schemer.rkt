@@ -534,3 +534,47 @@
                           (chips ((with) fish)
                                  (chips))))
               'potato)
+
+;; -----------------------------------------------------------------------------
+
+(define eqlist?
+  (λ (l1 l2)
+    (cond
+      ((and (null? l1) (null? l2)) #t)
+      ((and (atom? l1) (atom? l2)) (eqan? l1 l2))
+      ((and (atom? l1) (not (atom? l2))) #f)
+      ((and (not (atom? l1)) (atom? l2)) #f)
+      ((and (atom? (car l1))
+            (atom? (car l2))
+            (eqan? (car l1) (car l2))) (eqlist? (cdr l1) (cdr l2)))
+      (else (and (eqlist? (car l1) (car l2))
+                 (eqlist? (cdr l1) (cdr l2)))))))
+
+;; this version, obviously, asks less questions than in the book.
+;; however, it passes all of the tests within the book, and - to
+;; me - seems consistent. YMMV. logic is hard, yo.
+
+(check-equal? (eqlist? '(a b c) '(a b c)) #t)
+(check-equal? (eqlist? '(strawberry ice cream)
+                       '(strawberry cream ice)) #f)
+(check-equal? (eqlist? '(banana ((split)))
+                       '((banana) (split))) #f)
+(check-equal? (eqlist? '(beef ((sausage)) (and (soda)))
+                       '(beef ((salami)) (and (soda)))) #f)
+(check-equal? (eqlist? '(beef ((sausage)) (and (soda)))
+                       '(beef ((sausage)) (and (soda)))) #t)
+
+;; -----------------------------------------------------------------------------
+
+(define equal?
+  (λ (s1 s2)
+    (cond
+      ;; the book uses a bit different conditions and
+      ;; recurses on eqlist? instead of equal?
+      ;; not sure why, perhaps I'm missing something.
+      ;; @TODO
+      ((and (null? s1) (null? s2)) #t)
+      ((and (atom? s1) (atom? s2)) (eqan? s1 s2))
+      ((null? s1) #f)
+      (else (and (equal? (car s1) (car s2))
+                 (equal? (cdr s1) (cdr s2)))))))
