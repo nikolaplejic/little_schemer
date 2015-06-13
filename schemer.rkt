@@ -578,3 +578,176 @@
       ((null? s1) #f)
       (else (and (equal? (car s1) (car s2))
                  (equal? (cdr s1) (cdr s2)))))))
+
+;; -----------------------------------------------------------------------------
+;; 6. SHADOWS
+;; -----------------------------------------------------------------------------
+
+;; I am a bit bewildered by this excercise. It may become clearer afterwards.
+;; However, currently, it seems we're treating all of the operators here as
+;; infix operators instead of prefix operators (as they are in Scheme). Why?
+
+;; I have also used our previously defined o^ operator instead of the "up
+;; arrow" operator used in the book.
+
+(define unsimplified-numbered?
+  (λ (aexp)
+    (cond
+      ((atom? aexp) (number? aexp))
+      ((eq? (car (cdr aexp)) '+) (and (unsimplified-numbered?
+                                       (car aexp))
+                                      (unsimplified-numbered?
+                                       (car (cdr (cdr aexp))))))
+      ((eq? (car (cdr aexp)) '-) (and (unsimplified-numbered?
+                                       (car aexp))
+                                      (unsimplified-numbered?
+                                       (car (cdr (cdr aexp))))))
+      ((eq? (car (cdr aexp)) 'o^) (and (unsimplified-numbered?
+                                        (car aexp))
+                                       (unsimplified-numbered?
+                                        (car (cdr (cdr aexp))))))
+      (else #f))))
+
+(check-equal? (unsimplified-numbered? '(2 + 3)) #t)
+(check-equal? (unsimplified-numbered? '(2 + (2 + 3))) #t)
+(check-equal? (unsimplified-numbered? '(2 + (2 + a))) #f)
+(check-equal? (unsimplified-numbered? '(2 + (2 o^ 5))) #t)
+(check-equal? (unsimplified-numbered? '(2 + (2 o^ a))) #f)
+
+(define numbered?
+  (λ (aexp)
+    (cond
+      ((atom? aexp) (number? aexp))
+      (else (and (numbered? (car aexp))
+                 (numbered? (car (cdr (cdr aexp)))))))))
+
+(check-equal? (numbered? '(2 + 3)) #t)
+(check-equal? (numbered? '(2 + (2 + 3))) #t)
+(check-equal? (numbered? '(2 + (2 + a))) #f)
+(check-equal? (numbered? '(2 + (2 o^ 5))) #t)
+(check-equal? (numbered? '(2 + (2 o^ a))) #f)
+
+;; -----------------------------------------------------------------------------
+
+;; Oh I see -- we'll basically write our own interpreter within the 'value'
+;; function. Hah, take that, macros!
+
+;; I have a distinct feeling we'll reimplement Scheme by the end of this book.
+
+(define value
+  (λ (exp)
+    (cond
+      ((atom? exp) exp)
+      ((eq? (car (cdr exp)) '+) (+ (value (car exp))
+                                   (value (car (cdr (cdr exp))))))
+      ((eq? (car (cdr exp)) '-) (- (value (car exp))
+                                   (value (car (cdr (cdr exp))))))
+      ((eq? (car (cdr exp)) 'o^) (o^ (value (car exp))
+                                     (value (car (cdr (cdr exp)))))))))
+
+(check-equal? (value '13) 13)
+(check-equal? (value '(1 + 3)) 4)
+(check-equal? (value '(1 + (3 o^ 4))) 82)
+
+;; -----------------------------------------------------------------------------
+
+;; Same evaluator, but for prefix notation.
+
+(define value1
+  (λ (exp)
+    (cond
+      ((atom? exp) exp)
+      ((eq? (car exp) '+) (+ (value1 (car (cdr exp)))
+                             (value1 (car (cdr (cdr exp))))))
+      ((eq? (car exp) '-) (- (value1 (car (cdr exp)))
+                             (value1 (car (cdr (cdr exp))))))
+      ((eq? (car exp) 'o^) (o^ (value1 (car (cdr exp)))
+                               (value1 (car (cdr (cdr exp)))))))))
+
+(check-equal? (value1 '13) 13)
+(check-equal? (value1 '(+ 1 3)) 4)
+(check-equal? (value1 '(+ 1 (o^ 3 4))) 82)
+
+;; -----------------------------------------------------------------------------
+
+;; Same prefix evaluator, but with helpers.
+
+(define 1st-sub-exp
+  (λ (aexp)
+    (car (cdr aexp))))
+
+(define 2nd-sub-exp
+  (λ (aexp)
+    (car (cdr (cdr aexp)))))
+
+(define operator
+  (λ (aexp)
+    (car aexp)))
+
+(define value2
+  (λ (nexp)
+    (cond
+      ((atom? nexp) nexp)
+      ((eq? (operator nexp) '+) (+ (value2 (1st-sub-exp nexp))
+                                   (value2 (2nd-sub-exp nexp))))
+      ((eq? (operator nexp) '-) (- (value2 (1st-sub-exp nexp))
+                                   (value2 (2nd-sub-exp nexp))))
+      ((eq? (operator nexp) 'o^) (o^ (value2 (1st-sub-exp nexp))
+                                     (value2 (2nd-sub-exp nexp)))))))
+
+(check-equal? (value2 '13) 13)
+(check-equal? (value2 '(+ 1 3)) 4)
+(check-equal? (value2 '(+ 1 (o^ 3 4))) 82)
+
+;; -----------------------------------------------------------------------------
+
+;; Same infix evaluator, but with helpers.
+
+;; By now, the naming is getting ridiculous.
+
+(define 1st-sub-exp1
+  (λ (aexp)
+    (car aexp)))
+
+(define 2nd-sub-exp1
+  (λ (aexp)
+    (car (cdr (cdr aexp)))))
+
+(define operator1
+  (λ (aexp)
+    (car (cdr aexp))))
+
+(define value3
+  (λ (nexp)
+    (cond
+      ((atom? nexp) nexp)
+      ((eq? (operator1 nexp) '+) (+ (value3 (1st-sub-exp1 nexp))
+                                    (value3 (2nd-sub-exp1 nexp))))
+      ((eq? (operator1 nexp) '-) (- (value3 (1st-sub-exp1 nexp))
+                                    (value3 (2nd-sub-exp1 nexp))))
+      ((eq? (operator1 nexp) 'o^) (o^ (value3 (1st-sub-exp1 nexp))
+                                      (value3 (2nd-sub-exp1 nexp)))))))
+
+(check-equal? (value3 '13) 13)
+(check-equal? (value3 '(1 + 3)) 4)
+(check-equal? (value3 '(1 + (3 o^ 4))) 82)
+
+;; -----------------------------------------------------------------------------
+
+(define sero?
+  (λ (n)
+    (null? n)))
+
+(define edd1
+  (λ (n)
+    (cons '() n)))
+
+(define zub1
+  (λ (n)
+    (cdr n)))
+
+(define o+1
+  (λ (x y)
+    (cond
+      ((sero? y) x)
+      (else (o+1 (edd1 x) (zub1 y))))))
